@@ -688,8 +688,10 @@ pub unsafe fn luaL_argexpected(L: *mut lua_State, cond: bool, arg: c_int, tname:
 }
 
 #[inline]
-pub unsafe fn luaL_checkstring(L: *mut lua_State, n: c_int) -> *const c_char{
-    luaL_checklstring(L, n, core::ptr::null_mut())
+pub unsafe fn luaL_checkstring(L: *mut lua_State, n: c_int) -> *const [c_char] {
+    let mut len = 0;
+    let ptr = luaL_checklstring(L, n, &mut len);
+    std::slice::from_raw_parts(ptr, len)
 }
 
 #[inline]

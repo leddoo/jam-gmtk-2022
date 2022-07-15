@@ -13,8 +13,6 @@ macro_rules! c_str {
     };
 }
 
-pub(crate) use c_str;
-
 
 #[inline(always)]
 pub unsafe fn check_args_eq_n(l: *mut lua_State, n: c_int) {
@@ -334,4 +332,8 @@ pub unsafe fn register_metatable(l: *mut lua_State, name: CStr, mt: &[luaL_Reg])
 
     lua_pop(l, 1);
 }
+
+
+pub(crate) use c_str;
+pub(crate) use def_userdata;
 
