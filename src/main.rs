@@ -262,26 +262,51 @@ pub fn try_move(dice: &mut Dice, level: &Level, side: Side) -> bool {
 #[macroquad::main("gmtk-2022")]
 async fn main() {
 
-    let levels = vec![
-        Level::parse(&[
-            ".....",
-            ".s.6.",
-            ".....",
-        ]),
-        Level::parse(&[
-            "......",
-            ".s..6.",
-            "......",
-        ]),
-    ];
+    fn parse_levels(levels: &str) -> Vec<Level> {
+        levels.split("\n\n")
+        .map(|lines|
+            Level::parse(
+                &lines.split("\n")
+                .filter(|line| line.len() > 0)
+                .collect::<Vec<_>>())
+        ).collect()
+    }
 
-    let mut level_index = 0;
-    let mut level = &levels[level_index];
-    let mut dice = Dice::new(level.start);
+    fn load(levels: &str) -> (Vec<Level>, usize, Dice) {
+        let levels = parse_levels(levels);
+        let level_index = 0;
+        let dice = Dice::new(levels[0].start);
+        (levels, level_index, dice)
+    }
+
+    fn hot_load() -> (Vec<Level>, usize, Dice) {
+        load(&String::from_utf8(std::fs::read("src/levels.txt").unwrap()).unwrap())
+    }
+
+    fn set_level(index: usize, levels: &[Level], level_index: &mut usize, dice: &mut Dice) {
+        *level_index = index;
+        *dice  = Dice::new(levels[*level_index].start);
+    }
+
+    fn next_level(levels: &[Level], level_index: &mut usize, dice: &mut Dice) {
+        if *level_index < levels.len() - 1 {
+            set_level(*level_index + 1, levels, level_index, dice);
+        }
+    }
+
+    fn prev_level(levels: &[Level], level_index: &mut usize, dice: &mut Dice) {
+        if *level_index > 0 {
+            set_level(*level_index - 1, levels, level_index, dice);
+        }
+    }
+
+    let (mut levels, mut level_index, mut dice) = hot_load();
 
     let tile_size = 50.0;
 
     loop {
+
+        let level = &levels[level_index];
 
         let mut moved = false;
         if is_key_pressed(KeyCode::Left) || is_key_pressed(KeyCode::A) {
@@ -299,12 +324,21 @@ async fn main() {
 
         if moved && level.detect_win(&dice) {
             println!("win!");
-            if level_index + 1 < levels.len() {
-                level_index += 1;
-                level = &levels[level_index];
-                dice = Dice::new(level.start);
-            }
+            next_level(&levels, &mut level_index, &mut dice);
         }
+
+        if is_key_pressed(KeyCode::F1) {
+            prev_level(&levels, &mut level_index, &mut dice);
+        }
+        if is_key_pressed(KeyCode::F2) {
+            next_level(&levels, &mut level_index, &mut dice);
+        }
+        if is_key_pressed(KeyCode::F5) {
+            (levels, level_index, dice) = hot_load();
+        }
+
+
+        let level = &levels[level_index];
 
         clear_background(GRAY);
 
