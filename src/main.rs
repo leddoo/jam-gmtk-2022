@@ -64,6 +64,10 @@ impl Level {
         None
     }
 
+    pub fn detect_win(&self, dice: &Dice) -> bool {
+        self.goals.iter().all(|goal| dice.on_tail(*goal) || *goal == dice.pos)
+    }
+
     pub fn render(&self, origin: Vec2, tile_size: f32) {
         for y in 0..self.size.y {
             for x in 0..self.size.x {
@@ -136,6 +140,15 @@ impl Dice {
 
     pub fn get(&self, side: Side) -> u8 {
         self.sides[side as usize]
+    }
+
+    pub fn on_tail(&self, target: IVec2) -> bool {
+        for (pos, _) in self.tail.iter() {
+            if *pos == target {
+                return true;
+            }
+        }
+        false
     }
 
     pub fn render(&self, origin: Vec2, tile_size: f32) {
@@ -215,64 +228,82 @@ pub fn draw_eyes(count: u8, pos: Vec2, tile_size: f32, color: Color) {
     }
 }
 
-pub fn try_move(dice: &mut Dice, level: &Level, side: Side) {
+pub fn try_move(dice: &mut Dice, level: &Level, side: Side) -> bool {
     let target = dice.pos + side.unit();
 
     if let Some((pos, _)) = dice.tail.last() {
         if *pos == target {
             dice.undo();
-            return;
+            return false;
         }
     }
 
-    for (pos, _) in dice.tail.iter() {
-        if *pos == target {
-            return;
-        }
+    if dice.on_tail(target) {
+        return false;
     }
 
     let tile = level.get(target.x, target.y);
 
     if tile == ' ' {
-        return;
+        return false;
     }
 
     if let Some(count) = Level::to_goal(tile) {
         if count != dice.get(side) {
-            return;
+            return false;
         }
     }
 
-    dice.move_thyself(side)
+    dice.move_thyself(side);
+    true
 }
 
 
 #[macroquad::main("gmtk-2022")]
 async fn main() {
 
-    let level = Level::parse(&[
-        ".....",
-        ".s.6.",
-        ".....",
-    ]);
+    let levels = vec![
+        Level::parse(&[
+            ".....",
+            ".s.6.",
+            ".....",
+        ]),
+        Level::parse(&[
+            "......",
+            ".s..6.",
+            "......",
+        ]),
+    ];
 
+    let mut level_index = 0;
+    let mut level = &levels[level_index];
     let mut dice = Dice::new(level.start);
 
     let tile_size = 50.0;
 
     loop {
 
+        let mut moved = false;
         if is_key_pressed(KeyCode::Left) || is_key_pressed(KeyCode::A) {
-            try_move(&mut dice, &level, Side::Left)
+            moved |= try_move(&mut dice, &level, Side::Left);
         }
         if is_key_pressed(KeyCode::Right) || is_key_pressed(KeyCode::D) {
-            try_move(&mut dice, &level, Side::Right)
+            moved |= try_move(&mut dice, &level, Side::Right);
         }
         if is_key_pressed(KeyCode::Down) || is_key_pressed(KeyCode::S) {
-            try_move(&mut dice, &level, Side::Down)
+            moved |= try_move(&mut dice, &level, Side::Down);
         }
         if is_key_pressed(KeyCode::Up) || is_key_pressed(KeyCode::W) {
-            try_move(&mut dice, &level, Side::Up)
+            moved |= try_move(&mut dice, &level, Side::Up);
+        }
+
+        if moved && level.detect_win(&dice) {
+            println!("win!");
+            if level_index + 1 < levels.len() {
+                level_index += 1;
+                level = &levels[level_index];
+                dice = Dice::new(level.start);
+            }
         }
 
         clear_background(GRAY);

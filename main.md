@@ -1,6 +1,4 @@
 todo:
-- win detection.
-- level progression.
 - level design.
 
 
