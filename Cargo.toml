@@ -5,4 +5,3 @@ edition = "2021"
 
 [dependencies]
 macroquad = "0.3.23"
-lua54-sys = { path = "lua54-sys" }
