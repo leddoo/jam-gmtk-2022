@@ -159,12 +159,6 @@ impl Dice {
         for (pos, count) in self.tail.iter() {
             draw_eyes(*count, origin + pos.as_f32()*tile_size, tile_size, Color::new(0.0, 0.0, 0.0, 0.5));
         }
-
-        let eye_color = Color::new(0.0, 0.0, 0.0, 0.25);
-        draw_eyes(self.get(Side::Left), pos + Vec2::new(-tile_size, 0.0), tile_size, eye_color);
-        draw_eyes(self.get(Side::Right), pos + Vec2::new(tile_size, 0.0), tile_size, eye_color);
-        draw_eyes(self.get(Side::Down), pos + Vec2::new(0.0, tile_size), tile_size, eye_color);
-        draw_eyes(self.get(Side::Up), pos + Vec2::new(0.0, -tile_size), tile_size, eye_color);
     }
 
     pub fn rotate(&self, side: Side) -> [u8; 6] {
@@ -207,7 +201,7 @@ impl Dice {
 }
 
 
-pub fn draw_eyes(count: u8, pos: Vec2, tile_size: f32, color: Color) {
+pub fn _draw_eyes<F: Fn(Vec2)>(count: u8, pos: Vec2, tile_size: f32, f: F) {
     assert!(count >= 1 && count <= 6);
 
     let padding = tile_size/4.0;
@@ -223,8 +217,38 @@ pub fn draw_eyes(count: u8, pos: Vec2, tile_size: f32, color: Color) {
     ];
 
     for eye in positions[count as usize - 1] {
-        let pos = pos + Vec2::splat(padding) + *eye*Vec2::splat(delta);
-        draw_circle(pos.x, pos.y, tile_size/10.0, color)
+        f(pos + Vec2::splat(padding) + *eye*Vec2::splat(delta));
+    }
+}
+
+pub fn draw_eyes(count: u8, pos: Vec2, tile_size: f32, color: Color) {
+    _draw_eyes(count, pos, tile_size, |pos|
+        draw_circle(pos.x, pos.y, tile_size/10.0, color));
+}
+
+pub fn draw_moves(level: &Level, dice: &Dice, origin: Vec2, tile_size: f32) {
+    for side in [Side::Left, Side::Right, Side::Down, Side::Up] {
+        let target = dice.pos + side.unit();
+
+        if dice.on_tail(target) {
+            continue;
+        }
+
+        let draw_pos = origin + target.as_f32()*tile_size;
+
+        let tile = level.get(target.x, target.y);
+        if tile == '.' {
+            draw_eyes(dice.get(side), draw_pos, tile_size, Color::new(1.0, 1.0, 1.0, 0.25));
+        }
+        if let Some(count) = Level::to_goal(tile) {
+            if count == dice.get(side) {
+                draw_eyes(dice.get(side), draw_pos, tile_size, Color::new(0.0, 1.0, 0.0, 0.5));
+            }
+            else {
+                _draw_eyes(dice.get(side), draw_pos, tile_size, |pos|
+                    draw_circle_lines(pos.x, pos.y, tile_size/10.0, 2.0, Color::new(1.0, 0.0, 0.0, 0.8)));
+            }
+        }
     }
 }
 
@@ -280,7 +304,8 @@ async fn main() {
     }
 
     fn hot_load() -> (Vec<Level>, usize, Dice) {
-        load(&String::from_utf8(std::fs::read("src/levels.txt").unwrap()).unwrap())
+        //load(&String::from_utf8(std::fs::read("src/levels.txt").unwrap()).unwrap())
+        load(std::str::from_utf8(include_bytes!("levels.txt")).unwrap())
     }
 
     fn set_level(index: usize, levels: &[Level], level_index: &mut usize, dice: &mut Dice) {
@@ -302,7 +327,7 @@ async fn main() {
 
     let (mut levels, mut level_index, mut dice) = hot_load();
 
-    let tile_size = 50.0;
+    let tile_size = 100.0;
 
     loop {
 
@@ -348,6 +373,7 @@ async fn main() {
 
         level.render(origin, tile_size);
         dice.render(origin, tile_size);
+        draw_moves(&level, &dice, origin, tile_size);
 
         next_frame().await;
     }

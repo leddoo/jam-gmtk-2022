@@ -11,4 +11,6 @@ polish:
 - use texture for dice eyes.
 - sound effects.
 - rotate eyes?
+- menu?
+- don't forget to remove level skip keys.
 
