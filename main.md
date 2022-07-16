@@ -1,5 +1,4 @@
 todo:
-- simplify parsing: take `&[&str]`.
 - dice trail, move validation, undo.
 - win detection.
 - level progression.

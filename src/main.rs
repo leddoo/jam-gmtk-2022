@@ -9,21 +9,14 @@ struct Level {
 }
 
 impl Level {
-    pub fn parse(level: &str) -> Level {
-        let lines = level.split("\n").map(str::trim).filter(|line| line.len() > 0);
-
+    pub fn parse(level: &[&str]) -> Level {
         let mut start = None;
         let mut width  = 0;
         let mut height = 0;
         let mut tiles = vec![];
         let mut goals = vec![];
 
-        for line in lines {
-            assert!(line.len() > 2);
-            assert!(line.as_bytes()[0]              == '|' as u8
-                &&  line.as_bytes()[line.len() - 1] == '|' as u8);
-            let line = &line[1..line.len() - 1];
-
+        for line in level {
             if height == 0 {
                 width = line.len();
             }
@@ -194,11 +187,11 @@ pub fn draw_eyes(count: u8, pos: Vec2, tile_size: f32, color: Color) {
 #[macroquad::main("gmtk-2022")]
 async fn main() {
 
-    let level = Level::parse(r#"
-        |.....|
-        |.s.6.|
-        |.....|
-    "#);
+    let level = Level::parse(&[
+        ".....",
+        ".s.6.",
+        ".....",
+    ]);
 
     let mut dice = Dice::new(level.start);
 
