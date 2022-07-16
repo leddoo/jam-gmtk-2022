@@ -1,3 +1,4 @@
+use lazy_static::lazy_static;
 use macroquad::prelude::*;
 
 
@@ -153,8 +154,13 @@ impl Dice {
 
     pub fn render(&self, origin: Vec2, tile_size: f32) {
         let pos = origin + self.pos.as_f32()*tile_size;
-        draw_rectangle(pos.x, pos.y, tile_size, tile_size, WHITE);
-        draw_eyes(self.get(Side::Sky), pos, tile_size, BLACK);
+
+        draw_texture_ex(*TEX_DICE, pos.x, pos.y, WHITE, DrawTextureParams {
+            dest_size: Some(Vec2::splat(tile_size)),
+            .. Default::default()
+        });
+
+        draw_eyes(self.get(Side::Sky), pos, tile_size, Color::from_rgba(23, 22, 38, 255));
 
         for (pos, count) in self.tail.iter() {
             draw_eyes(*count, origin + pos.as_f32()*tile_size, tile_size, Color::new(0.0, 0.0, 0.0, 0.5));
@@ -201,29 +207,12 @@ impl Dice {
 }
 
 
-pub fn _draw_eyes<F: Fn(Vec2)>(count: u8, pos: Vec2, tile_size: f32, f: F) {
-    assert!(count >= 1 && count <= 6);
-
-    let padding = tile_size/4.0;
-    let delta   = (tile_size - 2.0*padding) / 2.0;
-
-    let positions = [
-        &[Vec2::new(1.0, 1.0)][..],
-        &[Vec2::new(0.0, 0.0), Vec2::new(2.0, 2.0)],
-        &[Vec2::new(0.0, 0.0), Vec2::new(1.0, 1.0), Vec2::new(2.0, 2.0)],
-        &[Vec2::new(0.0, 0.0), Vec2::new(0.0, 2.0), Vec2::new(2.0, 2.0), Vec2::new(2.0, 0.0)],
-        &[Vec2::new(0.0, 0.0), Vec2::new(0.0, 2.0), Vec2::new(2.0, 2.0), Vec2::new(2.0, 0.0), Vec2::new(1.0, 1.0)],
-        &[Vec2::new(0.0, 0.0), Vec2::new(0.0, 2.0), Vec2::new(2.0, 2.0), Vec2::new(2.0, 0.0), Vec2::new(0.0, 1.0), Vec2::new(2.0, 1.0)],
-    ];
-
-    for eye in positions[count as usize - 1] {
-        f(pos + Vec2::splat(padding) + *eye*Vec2::splat(delta));
-    }
-}
-
 pub fn draw_eyes(count: u8, pos: Vec2, tile_size: f32, color: Color) {
-    _draw_eyes(count, pos, tile_size, |pos|
-        draw_circle(pos.x, pos.y, tile_size/10.0, color));
+    assert!(count >= 1 && count <= 6);
+    draw_texture_ex(TEX_EYES[(count - 1) as usize], pos.x, pos.y, color, DrawTextureParams {
+        dest_size: Some(Vec2::splat(tile_size)),
+        .. Default::default()
+    });
 }
 
 pub fn draw_moves(level: &Level, dice: &Dice, origin: Vec2, tile_size: f32) {
@@ -245,8 +234,7 @@ pub fn draw_moves(level: &Level, dice: &Dice, origin: Vec2, tile_size: f32) {
                 draw_eyes(dice.get(side), draw_pos, tile_size, Color::new(0.0, 1.0, 0.0, 0.5));
             }
             else {
-                _draw_eyes(dice.get(side), draw_pos, tile_size, |pos|
-                    draw_circle_lines(pos.x, pos.y, tile_size/10.0, 2.0, Color::new(1.0, 0.0, 0.0, 0.8)));
+                draw_eyes(dice.get(side), draw_pos, tile_size, Color::new(1.0, 0.0, 0.0, 0.25));
             }
         }
     }
@@ -281,6 +269,32 @@ pub fn try_move(dice: &mut Dice, level: &Level, side: Side) -> bool {
     dice.move_thyself(side);
     true
 }
+
+
+
+// TEXTURES
+
+pub fn load_texture(bytes: &[u8]) -> Texture2D {
+    let t = Texture2D::from_file_with_format(bytes, Some(ImageFormat::Png));
+    t.set_filter(FilterMode::Nearest);
+    t
+}
+
+lazy_static!(
+    static ref TEX_DICE: Texture2D = load_texture(include_bytes!("texture/dice.png"));
+);
+
+lazy_static!(
+    static ref TEX_EYES: [Texture2D; 6] = [
+        load_texture(include_bytes!("texture/eyes-1.png")),
+        load_texture(include_bytes!("texture/eyes-2.png")),
+        load_texture(include_bytes!("texture/eyes-3.png")),
+        load_texture(include_bytes!("texture/eyes-4.png")),
+        load_texture(include_bytes!("texture/eyes-5.png")),
+        load_texture(include_bytes!("texture/eyes-6.png")),
+    ];
+);
+
 
 
 #[macroquad::main("gmtk-2022")]
