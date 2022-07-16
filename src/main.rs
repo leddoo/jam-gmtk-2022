@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 
 
-struct Level {
+pub struct Level {
     start: IVec2,
     size:  IVec2,
     tiles: Vec<char>,
@@ -57,6 +57,13 @@ impl Level {
         }
     }
 
+    pub fn to_goal(tile: char) -> Option<u8> {
+        if "123456".contains(tile) {
+            return Some((tile as u8) - ('1' as u8) + 1);
+        }
+        None
+    }
+
     pub fn render(&self, origin: Vec2, tile_size: f32) {
         for y in 0..self.size.y {
             for x in 0..self.size.x {
@@ -72,8 +79,7 @@ impl Level {
                     tile_size, tile_size,
                     DARKGRAY);
 
-                if "123456".contains(tile) {
-                    let count = tile as u8 - '1' as u8 + 1;
+                if let Some(count) = Self::to_goal(tile) {
                     draw_eyes(count, pos, tile_size, BLACK);
                 }
             }
@@ -85,7 +91,7 @@ impl Level {
 
 #[derive(Clone, Copy, PartialEq)]
 #[repr(usize)]
-enum Side {
+pub enum Side {
     Floor = 0,
     Sky   = 1,
     Left  = 2,
@@ -104,17 +110,28 @@ impl Side {
             _ => unreachable!()
         }
     }
+
+    pub fn from_unit(unit: IVec2) -> Side {
+        match (unit.x, unit.y) {
+            (-1, 0) => Side::Left,
+            ( 1, 0) => Side::Right,
+            (0,  1) => Side::Down,
+            (0, -1) => Side::Up,
+            _ => unreachable!()
+        }
+    }
 }
 
 
-struct Dice {
+pub struct Dice {
     pos: IVec2,
     sides: [u8; 6],
+    tail: Vec<(IVec2, u8)>,
 }
 
 impl Dice {
     pub fn new(pos: IVec2) -> Dice {
-        Dice { pos, sides: [1, 6, 4, 3, 5, 2] }
+        Dice { pos, sides: [1, 6, 4, 3, 5, 2], tail: vec![] }
     }
 
     pub fn get(&self, side: Side) -> u8 {
@@ -126,6 +143,10 @@ impl Dice {
         draw_rectangle(pos.x, pos.y, tile_size, tile_size, WHITE);
         draw_eyes(self.get(Side::Sky), pos, tile_size, BLACK);
 
+        for (pos, count) in self.tail.iter() {
+            draw_eyes(*count, origin + pos.as_f32()*tile_size, tile_size, Color::new(0.0, 0.0, 0.0, 0.5));
+        }
+
         let eye_color = Color::new(0.0, 0.0, 0.0, 0.25);
         draw_eyes(self.get(Side::Left), pos + Vec2::new(-tile_size, 0.0), tile_size, eye_color);
         draw_eyes(self.get(Side::Right), pos + Vec2::new(tile_size, 0.0), tile_size, eye_color);
@@ -133,7 +154,7 @@ impl Dice {
         draw_eyes(self.get(Side::Up), pos + Vec2::new(0.0, -tile_size), tile_size, eye_color);
     }
 
-    pub fn move_thyself(&mut self, side: Side) {
+    pub fn rotate(&self, side: Side) -> [u8; 6] {
         let floor = Side::Floor as usize;
         let sky   = Side::Sky as usize;
         let left  = Side::Left as usize;
@@ -156,8 +177,19 @@ impl Dice {
             sides[to] = self.sides[from];
         }
 
-        self.sides = sides;
+        sides
+    }
+
+    pub fn move_thyself(&mut self, side: Side) {
+        self.tail.push((self.pos, self.get(Side::Floor)));
+        self.sides = self.rotate(side);
         self.pos  += side.unit();
+    }
+
+    pub fn undo(&mut self) {
+        let (pos, _) = self.tail.pop().unwrap();
+        self.sides = self.rotate(Side::from_unit(pos - self.pos));
+        self.pos = pos;
     }
 }
 
@@ -183,6 +215,37 @@ pub fn draw_eyes(count: u8, pos: Vec2, tile_size: f32, color: Color) {
     }
 }
 
+pub fn try_move(dice: &mut Dice, level: &Level, side: Side) {
+    let target = dice.pos + side.unit();
+
+    if let Some((pos, _)) = dice.tail.last() {
+        if *pos == target {
+            dice.undo();
+            return;
+        }
+    }
+
+    for (pos, _) in dice.tail.iter() {
+        if *pos == target {
+            return;
+        }
+    }
+
+    let tile = level.get(target.x, target.y);
+
+    if tile == ' ' {
+        return;
+    }
+
+    if let Some(count) = Level::to_goal(tile) {
+        if count != dice.get(side) {
+            return;
+        }
+    }
+
+    dice.move_thyself(side)
+}
+
 
 #[macroquad::main("gmtk-2022")]
 async fn main() {
@@ -200,16 +263,16 @@ async fn main() {
     loop {
 
         if is_key_pressed(KeyCode::Left) || is_key_pressed(KeyCode::A) {
-            dice.move_thyself(Side::Left);
+            try_move(&mut dice, &level, Side::Left)
         }
         if is_key_pressed(KeyCode::Right) || is_key_pressed(KeyCode::D) {
-            dice.move_thyself(Side::Right);
+            try_move(&mut dice, &level, Side::Right)
         }
         if is_key_pressed(KeyCode::Down) || is_key_pressed(KeyCode::S) {
-            dice.move_thyself(Side::Down);
+            try_move(&mut dice, &level, Side::Down)
         }
         if is_key_pressed(KeyCode::Up) || is_key_pressed(KeyCode::W) {
-            dice.move_thyself(Side::Up);
+            try_move(&mut dice, &level, Side::Up)
         }
 
         clear_background(GRAY);
