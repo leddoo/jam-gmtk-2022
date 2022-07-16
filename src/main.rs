@@ -69,7 +69,7 @@ impl Level {
         self.goals.iter().all(|goal| dice.on_tail(*goal) || *goal == dice.pos)
     }
 
-    pub fn render(&self, origin: Vec2, tile_size: f32) {
+    pub fn render(&self, origin: Vec2, tile_size: Vec2, _t: f32) {
         for y in 0..self.size.y {
             for x in 0..self.size.x {
                 let pos = origin + Vec2::new(x as f32, y as f32)*tile_size;
@@ -81,7 +81,7 @@ impl Level {
 
                 draw_rectangle(
                     pos.x, pos.y,
-                    tile_size, tile_size,
+                    tile_size.x, tile_size.y,
                     DARKGRAY);
 
                 if let Some(count) = Self::to_goal(tile) {
@@ -132,15 +132,27 @@ pub struct Dice {
     pos: IVec2,
     sides: [u8; 6],
     tail: Vec<(IVec2, u8)>,
+    prev_eyes: u8,
+    prev_pos: IVec2,
 }
 
 impl Dice {
     pub fn new(pos: IVec2) -> Dice {
-        Dice { pos, sides: [1, 6, 4, 3, 5, 2], tail: vec![] }
+        Dice {
+            pos,
+            sides: [1, 6, 4, 3, 5, 2],
+            tail: vec![],
+            prev_eyes: 0,
+            prev_pos: pos,
+        }
     }
 
     pub fn get(&self, side: Side) -> u8 {
         self.sides[side as usize]
+    }
+
+    pub fn eyes(&self) -> u8 {
+        self.get(Side::Sky)
     }
 
     pub fn on_tail(&self, target: IVec2) -> bool {
@@ -152,15 +164,35 @@ impl Dice {
         false
     }
 
-    pub fn render(&self, origin: Vec2, tile_size: f32) {
-        let pos = origin + self.pos.as_f32()*tile_size;
+    pub fn render(&self, origin: Vec2, tile_size: Vec2, t: f32) {
+        let eye_color = Color::from_rgba(23, 22, 38, 255);
 
-        draw_texture_ex(*TEX_DICE, pos.x, pos.y, WHITE, DrawTextureParams {
-            dest_size: Some(Vec2::splat(tile_size)),
-            .. Default::default()
-        });
+        let mut pos = origin + self.pos.as_f32()*tile_size;
 
-        draw_eyes(self.get(Side::Sky), pos, tile_size, Color::from_rgba(23, 22, 38, 255));
+        let (mut curr_pos, mut curr_size) = (pos, tile_size);
+        if t < 1.0 && self.prev_eyes != 0 {
+            let (prev_pos, prev_size);
+
+            let unit = (self.pos - self.prev_pos).as_f32() * tile_size;
+
+            pos -= (1.0 - t)*unit;
+
+            // we do not talk about how long it took me to figure this out...
+            if unit.x + unit.y < 0.0 {
+                prev_pos  = pos;
+                curr_pos  = pos - (1.0 - t)*unit;
+            }
+            else {
+                prev_pos  = pos + t*unit;
+                curr_pos  = pos;
+            }
+            prev_size = tile_size - t*unit.abs();
+            curr_size = tile_size - (1.0 - t)*unit.abs();
+
+            draw_dice(prev_pos, prev_size, self.prev_eyes, eye_color);
+        }
+
+        draw_dice(curr_pos, curr_size, self.eyes(), eye_color);
 
         for (pos, count) in self.tail.iter() {
             draw_eyes(*count, origin + pos.as_f32()*tile_size, tile_size, Color::new(0.0, 0.0, 0.0, 0.5));
@@ -194,12 +226,18 @@ impl Dice {
     }
 
     pub fn move_thyself(&mut self, side: Side) {
+        self.prev_pos = self.pos;
+        self.prev_eyes = self.eyes();
+
         self.tail.push((self.pos, self.get(Side::Floor)));
         self.sides = self.rotate(side);
         self.pos  += side.unit();
     }
 
     pub fn undo(&mut self) {
+        self.prev_pos = self.pos;
+        self.prev_eyes = self.eyes();
+
         let (pos, _) = self.tail.pop().unwrap();
         self.sides = self.rotate(Side::from_unit(pos - self.pos));
         self.pos = pos;
@@ -207,15 +245,24 @@ impl Dice {
 }
 
 
-pub fn draw_eyes(count: u8, pos: Vec2, tile_size: f32, color: Color) {
+pub fn draw_eyes(count: u8, pos: Vec2, size: Vec2, color: Color) {
     assert!(count >= 1 && count <= 6);
     draw_texture_ex(TEX_EYES[(count - 1) as usize], pos.x, pos.y, color, DrawTextureParams {
-        dest_size: Some(Vec2::splat(tile_size)),
+        dest_size: Some(size),
         .. Default::default()
     });
 }
 
-pub fn draw_moves(level: &Level, dice: &Dice, origin: Vec2, tile_size: f32) {
+pub fn draw_dice(pos: Vec2, size: Vec2, eye_count: u8, eye_color: Color) {
+    draw_texture_ex(*TEX_DICE, pos.x, pos.y, WHITE, DrawTextureParams {
+        dest_size: Some(size),
+        .. Default::default()
+    });
+
+    draw_eyes(eye_count, pos, size, eye_color);
+}
+
+pub fn draw_moves(level: &Level, dice: &Dice, origin: Vec2, tile_size: Vec2) {
     for side in [Side::Left, Side::Right, Side::Down, Side::Up] {
         let target = dice.pos + side.unit();
 
@@ -246,7 +293,7 @@ pub fn try_move(dice: &mut Dice, level: &Level, side: Side) -> bool {
     if let Some((pos, _)) = dice.tail.last() {
         if *pos == target {
             dice.undo();
-            return false;
+            return true;
         }
     }
 
@@ -272,6 +319,24 @@ pub fn try_move(dice: &mut Dice, level: &Level, side: Side) -> bool {
 
 
 
+// ANIMATION
+
+struct Anim {
+    start: f64,
+    duration: f64,
+}
+
+impl Anim {
+    pub fn new(start: f64, duration: f64) -> Anim {
+        Anim { start, duration }
+    }
+
+    pub fn t(&self) -> f32 {
+        ((get_time() - self.start).min(self.duration) / self.duration) as f32
+    }
+}
+
+
 // TEXTURES
 
 pub fn load_texture(bytes: &[u8]) -> Texture2D {
@@ -294,7 +359,6 @@ lazy_static!(
         load_texture(include_bytes!("texture/eyes-6.png")),
     ];
 );
-
 
 
 #[macroquad::main("gmtk-2022")]
@@ -339,31 +403,57 @@ async fn main() {
         }
     }
 
+
+
+    #[derive(Clone, Copy, PartialEq)]
+    enum GameState {
+        Ready,
+        Moving,
+    }
+
+
+    let tile_size = Vec2::splat(100.0);
+
     let (mut levels, mut level_index, mut dice) = hot_load();
 
-    let tile_size = 100.0;
+    let mut game_state = GameState::Ready;
+    let mut move_anim = Anim::new(-100.0, 0.125);
 
     loop {
+        let now = get_time();
 
         let level = &levels[level_index];
 
-        let mut moved = false;
-        if is_key_pressed(KeyCode::Left) || is_key_pressed(KeyCode::A) {
-            moved |= try_move(&mut dice, &level, Side::Left);
-        }
-        if is_key_pressed(KeyCode::Right) || is_key_pressed(KeyCode::D) {
-            moved |= try_move(&mut dice, &level, Side::Right);
-        }
-        if is_key_pressed(KeyCode::Down) || is_key_pressed(KeyCode::S) {
-            moved |= try_move(&mut dice, &level, Side::Down);
-        }
-        if is_key_pressed(KeyCode::Up) || is_key_pressed(KeyCode::W) {
-            moved |= try_move(&mut dice, &level, Side::Up);
-        }
+        if game_state == GameState::Ready {
+            let mut moved = false;
+            if is_key_pressed(KeyCode::Left) || is_key_pressed(KeyCode::A) {
+                moved |= try_move(&mut dice, &level, Side::Left);
+            }
+            if is_key_pressed(KeyCode::Right) || is_key_pressed(KeyCode::D) {
+                moved |= try_move(&mut dice, &level, Side::Right);
+            }
+            if is_key_pressed(KeyCode::Down) || is_key_pressed(KeyCode::S) {
+                moved |= try_move(&mut dice, &level, Side::Down);
+            }
+            if is_key_pressed(KeyCode::Up) || is_key_pressed(KeyCode::W) {
+                moved |= try_move(&mut dice, &level, Side::Up);
+            }
 
-        if moved && level.detect_win(&dice) {
-            println!("win!");
-            next_level(&levels, &mut level_index, &mut dice);
+            if moved {
+                if level.detect_win(&dice) {
+                    println!("win!");
+                    next_level(&levels, &mut level_index, &mut dice);
+                }
+                else {
+                    game_state = GameState::Moving;
+                    move_anim.start = now;
+                }
+            }
+        }
+        else if game_state == GameState::Moving {
+            if move_anim.t() == 1.0 {
+                game_state = GameState::Ready;
+            }
         }
 
         if is_key_pressed(KeyCode::F1) {
@@ -385,8 +475,9 @@ async fn main() {
         let screen_size = Vec2::new(screen_width(), screen_height());
         let origin = (screen_size/2.0 - board_size/2.0).floor();
 
-        level.render(origin, tile_size);
-        dice.render(origin, tile_size);
+        let t = move_anim.t();
+        level.render(origin, tile_size, t);
+        dice.render(origin, tile_size, t);
         draw_moves(&level, &dice, origin, tile_size);
 
         next_frame().await;
