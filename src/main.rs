@@ -471,11 +471,11 @@ pub async fn load_sound(bytes: &[u8]) -> Sound {
 }
 
 static mut _SND_STEPS: Option<[Sound; 4]> = None;
-static mut _SND_GOAL: Option<[Sound; 3]> = None;
+static mut _SND_GOAL: Option<[Sound; 2]> = None;
 
 lazy_static!(
     static ref SND_STEPS: [Sound; 4] = unsafe { _SND_STEPS.unwrap() };
-    static ref SND_GOAL: [Sound; 3] = unsafe { _SND_GOAL.unwrap() };
+    static ref SND_GOAL: [Sound; 2] = unsafe { _SND_GOAL.unwrap() };
 );
 
 
@@ -538,7 +538,6 @@ async fn main() {
         _SND_GOAL = Some([
             load_sound(include_bytes!("sound/goal-0.wav")).await,
             load_sound(include_bytes!("sound/goal-1.wav")).await,
-            load_sound(include_bytes!("sound/goal-2.wav")).await,
         ]);
     }
 
