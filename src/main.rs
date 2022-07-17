@@ -464,6 +464,8 @@ lazy_static!(
     static ref TEX_GRASS_FRONT: Texture2D = load_texture(include_bytes!("texture/grass-front.png"));
 
     static ref TEX_WATER: Texture2D = load_texture(include_bytes!("texture/water.png"));
+
+    static ref TEX_WELCOME: Texture2D = load_texture(include_bytes!("texture/menu.png"));
 );
 
 
@@ -547,14 +549,16 @@ async fn main() {
 
     #[derive(Clone, Copy, PartialEq)]
     enum GameState {
+        Welcome,
         Ready,
         Moving,
+        Done,
     }
 
 
     let (mut levels, mut level_index, mut dice) = hot_load();
 
-    let mut game_state = GameState::Ready;
+    let mut game_state = GameState::Welcome;
     let mut move_anim = Anim::new(-100.0, 0.125);
 
     loop {
@@ -593,46 +597,69 @@ async fn main() {
                     move_anim.start = now;
                 }
             }
+
+            if is_key_pressed(KeyCode::R) && dice.tail.len() > 0 {
+                set_level(level_index, &levels, &mut level_index, &mut dice);
+                play_step();
+            }
+
+            if is_key_pressed(KeyCode::F1) {
+                prev_level(&levels, &mut level_index, &mut dice);
+            }
+            if is_key_pressed(KeyCode::F2) {
+                next_level(&levels, &mut level_index, &mut dice);
+            }
+            if is_key_pressed(KeyCode::F5) {
+                (levels, level_index, dice) = hot_load();
+            }
         }
         else if game_state == GameState::Moving {
             if move_anim.t() == 1.0 {
                 game_state = GameState::Ready;
             }
         }
-
-        if is_key_pressed(KeyCode::R) && dice.tail.len() > 0 {
-            set_level(level_index, &levels, &mut level_index, &mut dice);
-            play_step();
-        }
-
-        if is_key_pressed(KeyCode::F1) {
-            prev_level(&levels, &mut level_index, &mut dice);
-        }
-        if is_key_pressed(KeyCode::F2) {
-            next_level(&levels, &mut level_index, &mut dice);
-        }
-        if is_key_pressed(KeyCode::F5) {
-            (levels, level_index, dice) = hot_load();
+        else if game_state == GameState::Welcome {
+            if is_key_pressed(KeyCode::Enter) {
+                game_state = GameState::Ready;
+                play_goal();
+            }
         }
 
 
-        let level = &levels[level_index];
+        if game_state == GameState::Ready || game_state == GameState::Moving {
+            let level = &levels[level_index];
 
-        let sx = screen_width()  / level.size.x as f32;
-        let sy = screen_height() / level.size.y as f32;
-        let s = (sx.min(sy) / 1.5).floor().min(150.0);
-        let tile_size = Vec2::splat(s);
+            let sx = screen_width()  / level.size.x as f32;
+            let sy = screen_height() / level.size.y as f32;
+            let s = (sx.min(sy) / 1.5).floor().min(150.0);
+            let tile_size = Vec2::splat(s);
 
-        let board_size = level.size.as_f32() * tile_size;
-        let screen_size = Vec2::new(screen_width(), screen_height());
-        let origin = (screen_size/2.0 - board_size/2.0).floor();
+            let board_size = level.size.as_f32() * tile_size;
+            let screen_size = Vec2::new(screen_width(), screen_height());
+            let origin = (screen_size/2.0 - board_size/2.0).floor();
 
-        draw_background(origin, tile_size);
+            draw_background(origin, tile_size);
 
-        let t = move_anim.t();
-        level.render(origin, tile_size, t);
-        draw_moves(&level, &dice, origin, tile_size);
-        dice.render(origin, tile_size, &level, t);
+            let t = move_anim.t();
+            level.render(origin, tile_size, t);
+            draw_moves(&level, &dice, origin, tile_size);
+            dice.render(origin, tile_size, &level, t);
+        }
+
+        if game_state == GameState::Welcome {
+            draw_background(Vec2::ZERO, Vec2::splat(150.0));
+
+            let size = Vec2::new(TEX_WELCOME.width(), TEX_WELCOME.height());
+            let sx = screen_width()  / size.x;
+            let sy = screen_height() / size.y;
+            let size = (sx.min(sy) / 1.5 * size).min(size);
+            let x = screen_width()/2.0  - size.x/2.0;
+            let y = screen_height()/2.0 - size.y/2.0;
+            draw_texture_ex(*TEX_WELCOME, x, y, WHITE, DrawTextureParams {
+                dest_size: Some(size),
+                .. Default::default()
+            });
+        }
 
         next_frame().await;
     }

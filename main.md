@@ -1,6 +1,5 @@
 todo:
 - polish:
-    - welcome screen with key bindings.
     - done screen.
     - level indicators.
     - level transitions.
