@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use macroquad::prelude::*;
+use macroquad::audio::*;
 
 
 pub struct Level {
@@ -342,6 +343,11 @@ pub fn draw_background(origin: Vec2, tile_size: Vec2) {
     }
 }
 
+pub fn play_step() {
+    let i = rand::rand() as usize % SND_STEPS.len();
+    play_sound_once(SND_STEPS[i]);
+}
+
 pub fn try_move(dice: &mut Dice, level: &Level, side: Side) -> bool {
     let target = dice.pos + side.unit();
 
@@ -449,6 +455,19 @@ lazy_static!(
 );
 
 
+// SOUNDS
+
+pub async fn load_sound(bytes: &[u8]) -> Sound {
+    macroquad::audio::load_sound_from_bytes(bytes).await.unwrap()
+}
+
+static mut _SND_STEPS: Option<[Sound; 4]> = None;
+
+lazy_static!(
+    static ref SND_STEPS: [Sound; 4] = unsafe { _SND_STEPS.unwrap() };
+);
+
+
 #[macroquad::main("gmtk-2022")]
 async fn main() {
 
@@ -493,6 +512,16 @@ async fn main() {
 
 
 
+    unsafe {
+        _SND_STEPS = Some([
+            load_sound(include_bytes!("sound/step-0.wav")).await,
+            load_sound(include_bytes!("sound/step-1.wav")).await,
+            load_sound(include_bytes!("sound/step-2.wav")).await,
+            load_sound(include_bytes!("sound/step-3.wav")).await,
+        ]);
+    }
+
+
     #[derive(Clone, Copy, PartialEq)]
     enum GameState {
         Ready,
@@ -528,6 +557,8 @@ async fn main() {
             }
 
             if moved {
+                play_step();
+
                 if level.detect_win(&dice) {
                     println!("win!");
                     next_level(&levels, &mut level_index, &mut dice);

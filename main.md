@@ -2,13 +2,13 @@ todo:
 - polish:
     - goal highlight.
     - goal hit effect.
+    - win effect.
+    - level transitions.
+    - tutorial overlay for first level: key guide for moves, flag on target.
+    - move buffering.
     - moves:
         - invalid move feedback.
         - pulsing blue outline.
-    - win animation.
-    - level transitions.
-    - simple sound effects.
-    - tutorial overlay for first level: key guide for moves, flag on target.
 - level design.
     - multiple in a row.
 - parser: begin/end markers, pad right with space.
