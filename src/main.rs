@@ -382,8 +382,8 @@ async fn main() {
     }
 
     fn hot_load() -> (Vec<Level>, usize, Dice) {
-        //load(&String::from_utf8(std::fs::read("src/levels.txt").unwrap()).unwrap())
-        load(std::str::from_utf8(include_bytes!("levels.txt")).unwrap())
+        load(&String::from_utf8(std::fs::read("src/levels.txt").unwrap()).unwrap())
+        //load(std::str::from_utf8(include_bytes!("levels.txt")).unwrap())
     }
 
     fn set_level(index: usize, levels: &[Level], level_index: &mut usize, dice: &mut Dice) {
