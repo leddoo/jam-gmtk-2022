@@ -1,6 +1,5 @@
 todo:
 - polish:
-    - playable level progression.
     - level transitions.
     - welcome screen with key bindings.
     - win effect.
