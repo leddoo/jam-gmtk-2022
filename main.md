@@ -1,9 +1,17 @@
 todo:
 - polish:
-    - intial submit: a tail of dice.
-    - win effect.
+    - playable level progression.
     - level transitions.
-    - tutorial overlay for first level: key guide for moves, flag on target.
+    - welcome screen with key bindings.
+    - win effect.
+- submit:
+    - logo.
+    - description.
+    - screenshots.
+    - latest file.
+    - make sure it's a "submission".
+- more levels.
+- polish:
     - menu.
     - move buffering.
         - if key went down, add to buffer if not full.

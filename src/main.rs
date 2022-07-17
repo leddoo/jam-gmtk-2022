@@ -550,8 +550,6 @@ async fn main() {
     }
 
 
-    let tile_size = Vec2::splat(100.0);
-
     let (mut levels, mut level_index, mut dice) = hot_load();
 
     let mut game_state = GameState::Ready;
@@ -581,7 +579,6 @@ async fn main() {
                 play_step();
 
                 if level.detect_win(&dice) {
-                    println!("win!");
                     next_level(&levels, &mut level_index, &mut dice);
                 }
                 else {
@@ -608,6 +605,11 @@ async fn main() {
 
 
         let level = &levels[level_index];
+
+        let sx = screen_width()  / level.size.x as f32;
+        let sy = screen_height() / level.size.y as f32;
+        let s = (sx.min(sy) / 1.5).floor().min(150.0);
+        let tile_size = Vec2::splat(s);
 
         let board_size = level.size.as_f32() * tile_size;
         let screen_size = Vec2::new(screen_width(), screen_height());
