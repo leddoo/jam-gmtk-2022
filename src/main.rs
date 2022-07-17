@@ -466,6 +466,7 @@ lazy_static!(
     static ref TEX_WATER: Texture2D = load_texture(include_bytes!("texture/water.png"));
 
     static ref TEX_WELCOME: Texture2D = load_texture(include_bytes!("texture/menu.png"));
+    static ref TEX_DONE: Texture2D = load_texture(include_bytes!("texture/thanks.png"));
 );
 
 
@@ -590,7 +591,12 @@ async fn main() {
                 play_step();
 
                 if level.detect_win(&dice) {
-                    next_level(&levels, &mut level_index, &mut dice);
+                    if level_index + 1 < levels.len() {
+                        next_level(&levels, &mut level_index, &mut dice);
+                    }
+                    else {
+                        game_state = GameState::Done;
+                    }
                 }
                 else {
                     game_state = GameState::Moving;
@@ -618,8 +624,9 @@ async fn main() {
                 game_state = GameState::Ready;
             }
         }
-        else if game_state == GameState::Welcome {
+        else if game_state == GameState::Welcome || game_state == GameState::Done {
             if is_key_pressed(KeyCode::Enter) {
+                set_level(0, &levels, &mut level_index, &mut dice);
                 game_state = GameState::Ready;
                 play_goal();
             }
@@ -646,16 +653,21 @@ async fn main() {
             dice.render(origin, tile_size, &level, t);
         }
 
-        if game_state == GameState::Welcome {
+        if game_state == GameState::Welcome || game_state == GameState::Done {
             draw_background(Vec2::ZERO, Vec2::splat(150.0));
 
-            let size = Vec2::new(TEX_WELCOME.width(), TEX_WELCOME.height());
+            let mut tex = *TEX_WELCOME;
+            if game_state == GameState::Done {
+                tex = *TEX_DONE;
+            }
+
+            let size = Vec2::new(tex.width(), tex.height());
             let sx = screen_width()  / size.x;
             let sy = screen_height() / size.y;
             let size = (sx.min(sy) / 1.5 * size).min(size);
             let x = screen_width()/2.0  - size.x/2.0;
             let y = screen_height()/2.0 - size.y/2.0;
-            draw_texture_ex(*TEX_WELCOME, x, y, WHITE, DrawTextureParams {
+            draw_texture_ex(tex, x, y, WHITE, DrawTextureParams {
                 dest_size: Some(size),
                 .. Default::default()
             });

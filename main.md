@@ -1,6 +1,5 @@
 todo:
 - polish:
-    - done screen.
     - level indicators.
     - level transitions.
     - win effect.
