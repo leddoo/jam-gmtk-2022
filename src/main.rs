@@ -94,7 +94,10 @@ impl Level {
 
                 if let Some(count) = Self::to_goal(tile) {
                     draw_eyes(count, pos, tile_size, Color::from_rgba(23, 22, 38, 128));
-                    draw_goal(pos, tile_size, Color::from_rgba(103, 175, 65, 200));
+
+                    let s = 0.875 + ((2.5 * get_time()).sin().abs() as f32)*0.125;
+                    let c = Color::from_rgba(103, 175, 65, 200).to_vec();
+                    draw_goal(pos, tile_size, Color::from_vec(s*c));
                 }
             }
         }
@@ -202,7 +205,7 @@ impl Dice {
 
             // border
             let s = 0.875 + ((2.5 * get_time()).sin().abs() as f32)*0.125;
-            let c = Color::from_rgba(90, 200, 255, 127).to_vec();
+            let c = Color::from_rgba(120, 170, 255, 127).to_vec();
             draw_border(draw_pos, tile_size, mask, Color::from_vec(s*c));
         }
 

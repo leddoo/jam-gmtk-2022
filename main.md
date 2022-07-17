@@ -3,7 +3,6 @@ todo:
     - welcome screen with key bindings.
     - done screen.
     - level indicators.
-    - level skip buttons.
     - level transitions.
     - win effect.
 - submit:
