@@ -70,19 +70,26 @@ impl Level {
     }
 
     pub fn render(&self, origin: Vec2, tile_size: Vec2, _t: f32) {
-        for y in 0..self.size.y {
+        for y in 0..self.size.y + 1 {
             for x in 0..self.size.x {
                 let pos = origin + Vec2::new(x as f32, y as f32)*tile_size;
 
                 let tile = self.get(x, y);
                 if tile == ' ' {
+                    if self.get(x, y-1) != ' ' {
+                        draw_texture_ex(*TEX_GRASS_FRONT, pos.x, pos.y, WHITE, DrawTextureParams {
+                            dest_size: Some(tile_size),
+                            .. Default::default()
+                        });
+                    }
+
                     continue;
                 }
 
-                draw_rectangle(
-                    pos.x, pos.y,
-                    tile_size.x, tile_size.y,
-                    DARKGRAY);
+                draw_texture_ex(*TEX_GRASS_BASE, pos.x, pos.y, WHITE, DrawTextureParams {
+                    dest_size: Some(tile_size),
+                    .. Default::default()
+                });
 
                 if let Some(count) = Self::to_goal(tile) {
                     draw_eyes(count, pos, tile_size, BLACK);
@@ -402,6 +409,14 @@ lazy_static!(
         load_texture(include_bytes!("texture/border-14.png")),
         load_texture(include_bytes!("texture/border-15.png")),
     ];
+);
+
+lazy_static!(
+    static ref TEX_GRASS_BASE: Texture2D = load_texture(include_bytes!("texture/grass-base.png"));
+);
+
+lazy_static!(
+    static ref TEX_GRASS_FRONT: Texture2D = load_texture(include_bytes!("texture/grass-front.png"));
 );
 
 

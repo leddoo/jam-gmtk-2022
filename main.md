@@ -3,7 +3,6 @@ todo:
     - moves:
         - invalid move feedback.
         - pulsing blue outline.
-    - tileset.
     - background.
     - win animation.
     - level transitions.
