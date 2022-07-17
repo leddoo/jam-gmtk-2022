@@ -1,9 +1,10 @@
 todo:
 - polish:
+    - goal highlight.
+    - goal hit effect.
     - moves:
         - invalid move feedback.
         - pulsing blue outline.
-    - background.
     - win animation.
     - level transitions.
     - simple sound effects.

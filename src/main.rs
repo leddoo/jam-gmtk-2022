@@ -317,6 +317,31 @@ pub fn draw_border(pos: Vec2, size: Vec2, mask: [bool; 6], color: Color) {
     });
 }
 
+pub fn draw_background(origin: Vec2, tile_size: Vec2) {
+    let o = origin.as_i32();
+    let t = tile_size.as_i32();
+
+    let offset = IVec2::new(o.x % t.x, o.y % t.y);
+    let size = IVec2::new(screen_width() as i32, screen_height() as i32);
+    let start = offset - t;
+
+    let mut y = start.y;
+    while y < size.y {
+
+        let mut x = start.x;
+        while x < size.x {
+            draw_texture_ex(*TEX_WATER, x as f32, y as f32, WHITE, DrawTextureParams {
+                dest_size: Some(tile_size),
+                .. Default::default()
+            });
+
+            x += t.x;
+        }
+
+        y += t.y;
+    }
+}
+
 pub fn try_move(dice: &mut Dice, level: &Level, side: Side) -> bool {
     let target = dice.pos + side.unit();
 
@@ -417,6 +442,10 @@ lazy_static!(
 
 lazy_static!(
     static ref TEX_GRASS_FRONT: Texture2D = load_texture(include_bytes!("texture/grass-front.png"));
+);
+
+lazy_static!(
+    static ref TEX_WATER: Texture2D = load_texture(include_bytes!("texture/water.png"));
 );
 
 
@@ -528,11 +557,11 @@ async fn main() {
 
         let level = &levels[level_index];
 
-        clear_background(GRAY);
-
         let board_size = level.size.as_f32() * tile_size;
         let screen_size = Vec2::new(screen_width(), screen_height());
         let origin = (screen_size/2.0 - board_size/2.0).floor();
+
+        draw_background(origin, tile_size);
 
         let t = move_anim.t();
         level.render(origin, tile_size, t);
