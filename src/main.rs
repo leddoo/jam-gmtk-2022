@@ -564,15 +564,20 @@ async fn main() {
             if is_key_pressed(KeyCode::Left) || is_key_pressed(KeyCode::A) {
                 moved |= try_move(&mut dice, &level, Side::Left);
             }
-            if is_key_pressed(KeyCode::Right) || is_key_pressed(KeyCode::D) {
+            else if is_key_pressed(KeyCode::Right) || is_key_pressed(KeyCode::D) {
                 moved |= try_move(&mut dice, &level, Side::Right);
             }
-            if is_key_pressed(KeyCode::Down) || is_key_pressed(KeyCode::S) {
+            else if is_key_pressed(KeyCode::Down) || is_key_pressed(KeyCode::S) {
                 moved |= try_move(&mut dice, &level, Side::Down);
             }
-            if is_key_pressed(KeyCode::Up) || is_key_pressed(KeyCode::W) {
+            else if is_key_pressed(KeyCode::Up) || is_key_pressed(KeyCode::W) {
                 moved |= try_move(&mut dice, &level, Side::Up);
             }
+            else if is_key_pressed(KeyCode::Z) && dice.tail.len() > 0 {
+                dice.undo();
+                moved = true;
+            }
+
 
             if moved {
                 play_step();
@@ -590,6 +595,11 @@ async fn main() {
             if move_anim.t() == 1.0 {
                 game_state = GameState::Ready;
             }
+        }
+
+        if is_key_pressed(KeyCode::R) && dice.tail.len() > 0 {
+            set_level(level_index, &levels, &mut level_index, &mut dice);
+            play_step();
         }
 
         if is_key_pressed(KeyCode::F1) {

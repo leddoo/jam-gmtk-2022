@@ -1,6 +1,5 @@
 todo:
 - polish:
-    - undo & reset.
     - welcome screen with key bindings.
     - done screen.
     - level indicators.
