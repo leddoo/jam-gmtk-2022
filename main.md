@@ -5,9 +5,6 @@ todo:
     - level transitions.
     - win effect.
 - submit:
-    - logo.
-    - description.
-    - screenshots.
     - latest file.
     - make sure it's a "submission".
 - more levels.
