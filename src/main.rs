@@ -169,6 +169,26 @@ impl Dice {
 
         let mut pos = origin + self.pos.as_f32()*tile_size;
 
+        let mut from = Side::Sky;
+        for i in 0..self.tail.len() {
+            let (pos, count) = self.tail[i];
+
+            let next = self.tail.get(i + 1).map(|(pos, _)| *pos).unwrap_or(self.pos);
+            let to = Side::from_unit(next - pos);
+
+            let mut mask = [true; 6];
+            mask[from as usize] = false;
+            mask[to   as usize] = false;
+            from = Side::from_unit(pos - next);
+
+            let draw_pos = origin + pos.as_f32()*tile_size;
+            draw_eyes(count, draw_pos, tile_size, Color::new(0.0, 0.0, 0.0, 0.5));
+
+            let s = 0.875 + ((2.5 * get_time()).sin().abs() as f32)*0.125;
+            let c = Color::from_rgba(90, 200, 255, 127).to_vec();
+            draw_border(draw_pos, tile_size, mask, Color::from_vec(s*c));
+        }
+
         let (mut curr_pos, mut curr_size) = (pos, tile_size);
         if t < 1.0 && self.prev_eyes != 0 {
             let (prev_pos, prev_size);
@@ -193,32 +213,22 @@ impl Dice {
         }
 
         draw_dice(curr_pos, curr_size, self.eyes(), eye_color);
-
-        for (pos, count) in self.tail.iter() {
-            draw_eyes(*count, origin + pos.as_f32()*tile_size, tile_size, Color::new(0.0, 0.0, 0.0, 0.5));
-        }
     }
 
     pub fn rotate(&self, side: Side) -> [u8; 6] {
-        let floor = Side::Floor as usize;
-        let sky   = Side::Sky as usize;
-        let left  = Side::Left as usize;
-        let right = Side::Right as usize;
-        let down  = Side::Down as usize;
-        let up    = Side::Up as usize;
-
+        use Side::*;
         let rotation = match side {
-            Side::Left  => [left, floor, right, sky],
-            Side::Right => [right, floor, left, sky],
-            Side::Down  => [down, floor, up, sky],
-            Side::Up    => [up, floor, down, sky],
+            Side::Left  => [Left, Floor, Right, Sky],
+            Side::Right => [Right, Floor, Left, Sky],
+            Side::Down  => [Down, Floor, Up, Sky],
+            Side::Up    => [Up, Floor, Down, Sky],
             _ => unreachable!()
         };
 
         let mut sides = self.sides;
         for i in 0..rotation.len() {
-            let from = rotation[i];
-            let to   = rotation[(i + 1) % rotation.len()];
+            let from = rotation[i] as usize;
+            let to   = rotation[(i + 1) % rotation.len()] as usize;
             sides[to] = self.sides[from];
         }
 
@@ -285,6 +295,19 @@ pub fn draw_moves(level: &Level, dice: &Dice, origin: Vec2, tile_size: Vec2) {
             }
         }
     }
+}
+
+pub fn draw_border(pos: Vec2, size: Vec2, mask: [bool; 6], color: Color) {
+    let index =
+          (!mask[Side::Left  as usize] as usize) << 0
+        | (!mask[Side::Up    as usize] as usize) << 1
+        | (!mask[Side::Right as usize] as usize) << 2
+        | (!mask[Side::Down  as usize] as usize) << 3;
+
+    draw_texture_ex(TEX_BORDER[index], pos.x, pos.y, color, DrawTextureParams {
+        dest_size: Some(size),
+        .. Default::default()
+    });
 }
 
 pub fn try_move(dice: &mut Dice, level: &Level, side: Side) -> bool {
@@ -357,6 +380,27 @@ lazy_static!(
         load_texture(include_bytes!("texture/eyes-4.png")),
         load_texture(include_bytes!("texture/eyes-5.png")),
         load_texture(include_bytes!("texture/eyes-6.png")),
+    ];
+);
+
+lazy_static!(
+    static ref TEX_BORDER: [Texture2D; 16] = [
+        load_texture(include_bytes!("texture/border-0.png")),
+        load_texture(include_bytes!("texture/border-1.png")),
+        load_texture(include_bytes!("texture/border-2.png")),
+        load_texture(include_bytes!("texture/border-3.png")),
+        load_texture(include_bytes!("texture/border-4.png")),
+        load_texture(include_bytes!("texture/border-5.png")),
+        load_texture(include_bytes!("texture/border-6.png")),
+        load_texture(include_bytes!("texture/border-7.png")),
+        load_texture(include_bytes!("texture/border-8.png")),
+        load_texture(include_bytes!("texture/border-9.png")),
+        load_texture(include_bytes!("texture/border-10.png")),
+        load_texture(include_bytes!("texture/border-11.png")),
+        load_texture(include_bytes!("texture/border-12.png")),
+        load_texture(include_bytes!("texture/border-13.png")),
+        load_texture(include_bytes!("texture/border-14.png")),
+        load_texture(include_bytes!("texture/border-15.png")),
     ];
 );
 

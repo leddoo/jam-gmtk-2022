@@ -1,15 +1,13 @@
 todo:
 - polish:
-    - trail:
-        - pulsing blue outline.
     - moves:
         - invalid move feedback.
         - pulsing blue outline.
+    - tileset.
+    - background.
     - win animation.
     - level transitions.
     - simple sound effects.
-    - tileset.
-    - background.
     - tutorial overlay for first level: key guide for moves, flag on target.
 - level design.
     - multiple in a row.
