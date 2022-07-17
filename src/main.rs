@@ -93,7 +93,8 @@ impl Level {
                 });
 
                 if let Some(count) = Self::to_goal(tile) {
-                    draw_eyes(count, pos, tile_size, BLACK);
+                    draw_eyes(count, pos, tile_size, Color::from_rgba(23, 22, 38, 128));
+                    draw_goal(pos, tile_size, Color::from_rgba(103, 175, 65, 200));
                 }
             }
         }
@@ -172,11 +173,12 @@ impl Dice {
         false
     }
 
-    pub fn render(&self, origin: Vec2, tile_size: Vec2, t: f32) {
+    pub fn render(&self, origin: Vec2, tile_size: Vec2, level: &Level, t: f32) {
         let eye_color = Color::from_rgba(23, 22, 38, 255);
 
         let mut pos = origin + self.pos.as_f32()*tile_size;
 
+        // tail.
         let mut from = Side::Sky;
         for i in 0..self.tail.len() {
             let (pos, count) = self.tail[i];
@@ -190,13 +192,21 @@ impl Dice {
             from = Side::from_unit(pos - next);
 
             let draw_pos = origin + pos.as_f32()*tile_size;
-            draw_eyes(count, draw_pos, tile_size, Color::new(0.0, 0.0, 0.0, 0.5));
 
+            // eyes
+            let mut c = eye_color; c.a = 0.5;
+            if let Some(_) = Level::to_goal(level.get(pos.x, pos.y)) {
+                c = Color::from_rgba(103, 175, 65, 200);
+            }
+            draw_eyes(count, draw_pos, tile_size, c);
+
+            // border
             let s = 0.875 + ((2.5 * get_time()).sin().abs() as f32)*0.125;
             let c = Color::from_rgba(90, 200, 255, 127).to_vec();
             draw_border(draw_pos, tile_size, mask, Color::from_vec(s*c));
         }
 
+        // roll anim.
         let (mut curr_pos, mut curr_size) = (pos, tile_size);
         if t < 1.0 && self.prev_eyes != 0 {
             let (prev_pos, prev_size);
@@ -296,10 +306,10 @@ pub fn draw_moves(level: &Level, dice: &Dice, origin: Vec2, tile_size: Vec2) {
         }
         if let Some(count) = Level::to_goal(tile) {
             if count == dice.get(side) {
-                draw_eyes(dice.get(side), draw_pos, tile_size, Color::new(0.0, 1.0, 0.0, 0.5));
+                draw_eyes(dice.get(side), draw_pos, tile_size, Color::from_rgba(103, 175, 65, 200));
             }
             else {
-                draw_eyes(dice.get(side), draw_pos, tile_size, Color::new(1.0, 0.0, 0.0, 0.25));
+                draw_eyes(dice.get(side), draw_pos, tile_size, Color::from_rgba(216, 59, 39, 200));
             }
         }
     }
@@ -341,6 +351,10 @@ pub fn draw_background(origin: Vec2, tile_size: Vec2) {
 
         y += t.y;
     }
+}
+
+pub fn draw_goal(pos: Vec2, size: Vec2, color: Color) {
+    draw_border(pos, size, [true; 6], color)
 }
 
 pub fn play_step() {
@@ -408,9 +422,7 @@ pub fn load_texture(bytes: &[u8]) -> Texture2D {
 
 lazy_static!(
     static ref TEX_DICE: Texture2D = load_texture(include_bytes!("texture/dice.png"));
-);
 
-lazy_static!(
     static ref TEX_EYES: [Texture2D; 6] = [
         load_texture(include_bytes!("texture/eyes-1.png")),
         load_texture(include_bytes!("texture/eyes-2.png")),
@@ -419,9 +431,7 @@ lazy_static!(
         load_texture(include_bytes!("texture/eyes-5.png")),
         load_texture(include_bytes!("texture/eyes-6.png")),
     ];
-);
 
-lazy_static!(
     static ref TEX_BORDER: [Texture2D; 16] = [
         load_texture(include_bytes!("texture/border-0.png")),
         load_texture(include_bytes!("texture/border-1.png")),
@@ -440,17 +450,10 @@ lazy_static!(
         load_texture(include_bytes!("texture/border-14.png")),
         load_texture(include_bytes!("texture/border-15.png")),
     ];
-);
 
-lazy_static!(
     static ref TEX_GRASS_BASE: Texture2D = load_texture(include_bytes!("texture/grass-base.png"));
-);
-
-lazy_static!(
     static ref TEX_GRASS_FRONT: Texture2D = load_texture(include_bytes!("texture/grass-front.png"));
-);
 
-lazy_static!(
     static ref TEX_WATER: Texture2D = load_texture(include_bytes!("texture/water.png"));
 );
 
@@ -596,8 +599,8 @@ async fn main() {
 
         let t = move_anim.t();
         level.render(origin, tile_size, t);
-        dice.render(origin, tile_size, t);
         draw_moves(&level, &dice, origin, tile_size);
+        dice.render(origin, tile_size, &level, t);
 
         next_frame().await;
     }
