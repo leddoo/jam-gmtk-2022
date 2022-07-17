@@ -1,6 +1,5 @@
 todo:
 - polish:
-    - goal hit effect.
     - intial submit: a tail of dice.
     - win effect.
     - level transitions.

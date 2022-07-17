@@ -362,6 +362,11 @@ pub fn play_step() {
     play_sound_once(SND_STEPS[i]);
 }
 
+pub fn play_goal() {
+    let i = rand::rand() as usize % SND_GOAL.len();
+    play_sound_once(SND_GOAL[i]);
+}
+
 pub fn try_move(dice: &mut Dice, level: &Level, side: Side) -> bool {
     let target = dice.pos + side.unit();
 
@@ -386,6 +391,7 @@ pub fn try_move(dice: &mut Dice, level: &Level, side: Side) -> bool {
         if count != dice.get(side) {
             return false;
         }
+        play_goal();
     }
 
     dice.move_thyself(side);
@@ -465,9 +471,11 @@ pub async fn load_sound(bytes: &[u8]) -> Sound {
 }
 
 static mut _SND_STEPS: Option<[Sound; 4]> = None;
+static mut _SND_GOAL: Option<[Sound; 3]> = None;
 
 lazy_static!(
     static ref SND_STEPS: [Sound; 4] = unsafe { _SND_STEPS.unwrap() };
+    static ref SND_GOAL: [Sound; 3] = unsafe { _SND_GOAL.unwrap() };
 );
 
 
@@ -515,12 +523,18 @@ async fn main() {
 
 
 
+    // load sounds.
     unsafe {
         _SND_STEPS = Some([
             load_sound(include_bytes!("sound/step-0.wav")).await,
             load_sound(include_bytes!("sound/step-1.wav")).await,
             load_sound(include_bytes!("sound/step-2.wav")).await,
             load_sound(include_bytes!("sound/step-3.wav")).await,
+        ]);
+        _SND_GOAL = Some([
+            load_sound(include_bytes!("sound/goal-0.wav")).await,
+            load_sound(include_bytes!("sound/goal-1.wav")).await,
+            load_sound(include_bytes!("sound/goal-2.wav")).await,
         ]);
     }
 
